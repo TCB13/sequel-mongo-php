@@ -1,0 +1,24 @@
+{
+  "name": "tcb13/thunder-tus-php",
+  "type": "library",
+  "description": "",
+  "require": {
+	"php": "^7.2",
+	"ext-json": "*",
+	"ext-curl": "*",
+	"ext-mongodb": "*",
+	"mongodb/mongodb": "1.4.*"
+  },
+  "authors": [
+	{
+	  "name": "TCB13",
+	  "email": "tadeu.bento@iklive.eu"
+	}
+  ],
+  "minimum-stability": "dev",
+  "autoload": {
+	"psr-4": {
+	  "SequelMongo\\": "src/"
+	}
+  }
+}
