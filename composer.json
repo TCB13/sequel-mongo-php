@@ -1,5 +1,5 @@
 {
-  "name": "tcb13/thunder-tus-php",
+  "name": "sequel-mongo-php",
   "type": "library",
   "description": "",
   "require": {
