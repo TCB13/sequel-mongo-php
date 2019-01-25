@@ -21,7 +21,7 @@ class QueryBuilder
 	private $fields = [];
 	private $limit = 0;
 	private $skip = 0;
-	private $order = ["_id" => 1];
+	private $order = [];
 	private $filters = [];
 	private $lookup = [];
 	private $unwind = [];
@@ -44,10 +44,13 @@ class QueryBuilder
 	 * QB Configuration
 	 */
 	public $deserializeMongoIds = true;
+	public $considerMongoIds = true;
 
 	public function __construct(?Database $connection = null)
 	{
 		$this->connection = $connection;
+		if ($this->considerMongoIds)
+			$this->order = ["_id" => 1];
 	}
 
 	/**
@@ -112,7 +115,8 @@ class QueryBuilder
 		if ($this->limit > 0)
 			$pipeline[] = ["\$limit" => $this->limit];
 
-		$pipeline[] = ["\$sort" => $this->order];
+		if (!empty($this->order))
+			$pipeline[] = ["\$sort" => $this->order];
 
 		if (!empty($this->fields))
 			$pipeline[] = ["\$project" => $this->fields];
@@ -130,7 +134,7 @@ class QueryBuilder
 		$this->fields = array_fill_keys(array_values($fields), 1);
 
 		// Exclude built in _id if not set in fields - MongoDB always returns this by default
-		if (!in_array("_id", $fields))
+		if ($this->considerMongoIds && !in_array("_id", $fields))
 			$this->fields["_id"] = 0;
 
 		return $this;
@@ -361,7 +365,7 @@ class QueryBuilder
 		$this->result->setTypeMap(compact("array", "document", "root"));
 		$results = $this->result->toArray();
 
-		if ($this->deserializeMongoIds && array_key_exists("_id", $this->fields) && $this->fields["_id"] === 1) {
+		if ($this->considerMongoIds && $this->deserializeMongoIds && array_key_exists("_id", $this->fields) && $this->fields["_id"] === 1) {
 			$results = \array_map(function ($result) {
 				if (is_object($result))
 					$result->_id = (string)$result->_id;
