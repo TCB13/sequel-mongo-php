@@ -1,5 +1,5 @@
 {
-  "name": "sequel-mongo-php",
+  "name": "tcb13/sequel-mongo-php",
   "type": "library",
   "description": "",
   "require": {
