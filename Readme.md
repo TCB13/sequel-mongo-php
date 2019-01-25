@@ -1,6 +1,6 @@
 # Seguel Mongo PHP
 
-A lightweight, expressive, framework agnostic **query builder for PHP** that empowers you to run **SQL-like queries on MongoDB databases**. Enjoy the best of the worlds!
+A lightweight, expressive, framework agnostic **query builder for PHP** that empowers you to run **SQL-like queries on MongoDB databases**. Enjoy the best of the two worlds!
 
 ### Installation
 
