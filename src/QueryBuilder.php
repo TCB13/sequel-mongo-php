@@ -343,27 +343,30 @@ class QueryBuilder
 	{
 		if (empty($this->filters))
 			throw new Exception("You must set a filter (where query) to update records.");
-		return $this->collection->updateMany($this->filters, ["\$set" => $update]);
+		return $this->collection->updateMany($this->getNormalizedFilters(), ["\$set" => $update]);
 	}
 
 	public function delete(): DeleteResult
 	{
 		if (empty($this->filters))
 			throw new Exception("You must set a filter (where query) to delete records.");
-		return $this->collection->deleteMany($this->filters);
+		return $this->collection->deleteMany($this->getNormalizedFilters());
 	}
 
 	/*
 	 * Result Output Methods
 	 */
-	protected function deserializeResult($array = "array", $document = "array", $root = "array"): ?array
+	protected function deserializeResult($array = "array", $document = "array", $root = "array")
 	{
 		$this->result->setTypeMap(compact("array", "document", "root"));
 		$results = $this->result->toArray();
 
 		if ($this->deserializeMongoIds && array_key_exists("_id", $this->fields) && $this->fields["_id"] === 1) {
 			$results = \array_map(function ($result) {
-				$result["_id"] = (string)$result["_id"];
+				if (is_object($result))
+					$result->_id = (string)$result->_id;
+				else
+					$result["_id"] = (string)$result["_id"];
 				return $result;
 			}, $results);
 		}
