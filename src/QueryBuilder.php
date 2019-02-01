@@ -2,6 +2,7 @@
 
 namespace SequelMongo;
 
+use MongoDB\BSON\UTCDateTime;
 use \MongoDB\Collection;
 use \MongoDB\Database;
 use \MongoDB\DeleteResult;
@@ -11,7 +12,9 @@ use \MongoDB\UpdateResult;
 class QueryBuilder
 {
 
-	/** @var \MongoDB\Database $con */
+	/** @var \MongoDB\Database */
+	private static $globalConnection;
+	/** @var \MongoDB\Database */
 	private $connection;
 	/** @var \MongoDB\Collection */
 	private $collection;
@@ -21,10 +24,12 @@ class QueryBuilder
 	private $fields = [];
 	private $limit = 0;
 	private $skip = 0;
-	private $order = [];
+	private $count = [];
+	private $order = ["_id" => 1];
 	private $filters = [];
 	private $lookup = [];
 	private $unwind = [];
+	private $group = [];
 
 	private $expectedMultipleResults = true;
 
@@ -44,23 +49,19 @@ class QueryBuilder
 	 * QB Configuration
 	 */
 	public $deserializeMongoIds = true;
-	public $considerMongoIds = true;
 
 	public function __construct(?Database $connection = null)
 	{
-		$this->connection = $connection;
-		if ($this->considerMongoIds)
-			$this->order = ["_id" => 1];
+		if (isset(self::$globalConnection))
+			$this->connection = self::$globalConnection;
+		if ($connection !== null)
+			$this->connection = $connection;
 	}
 
-	/**
-	 * @return static
-	 */
-	public static function instance()
+	public static function setGlobalConnection(Database $connection)
 	{
-		return new static();
+		self::$globalConnection = $connection;
 	}
-
 
 	/**
 	 * @param $collection
@@ -77,7 +78,7 @@ class QueryBuilder
 		}
 
 		if (!isset($this->connection))
-			throw new Exception("Collections can only be set with strings you provide a MongoDB connection at the constructor.");
+			throw new Exception("Collections can only be set with strings if you provide a MongoDB connection at the constructor.");
 
 		// if is_array() => collection alias on queries?
 
@@ -110,31 +111,58 @@ class QueryBuilder
 			];
 		}
 
+		$pipeline[] = ["\$sort" => $this->order];
+
 		if ($this->skip > 0)
 			$pipeline[] = ["\$skip" => $this->skip];
 		if ($this->limit > 0)
 			$pipeline[] = ["\$limit" => $this->limit];
 
-		if (!empty($this->order))
-			$pipeline[] = ["\$sort" => $this->order];
+		if (!empty($this->count))
+			$pipeline[] = $this->count;
 
 		if (!empty($this->fields))
 			$pipeline[] = ["\$project" => $this->fields];
 
+		if (!empty($this->group))
+			$pipeline[] = $this->group;
+
 		// @todo: check if the pipeline has enough information to run a query!
 
 		$this->result = $this->collection->aggregate($pipeline);
-
 		return $this;
 	}
 
 	public function select($fields): self
 	{
-		$fields       = is_array($fields) ? $fields : func_get_args();
-		$this->fields = array_fill_keys(array_values($fields), 1);
+		$fields = is_array($fields) && count(func_get_args()) === 1 && is_int(key($fields)) ? $fields : func_get_args();
+		$fields = array_map(function ($field) {
+			// Simple field
+			if (is_string($field))
+				return [$field => 1];
+			// Create an alias for a field
+			if (is_array($field))
+				return [reset($field) => "\$" . key($field)];
+			// ArrayLength Function or COUNT feature
+			if ($field instanceof ArrayLength /*|| $field instanceof Count*/)
+				return $field->asArray();
+			return $field;
+		}, $fields);
+
+		$this->fields = array_filter($fields, function ($field) {
+			// Max / Min
+			if ($field instanceof Max) {
+				$this->group = $field->asArray();
+				return false;
+			}
+			return true;
+		});
+
+		if (count($this->fields))
+			$this->fields = call_user_func_array("array_merge", $this->fields);
 
 		// Exclude built in _id if not set in fields - MongoDB always returns this by default
-		if ($this->considerMongoIds && !in_array("_id", $fields))
+		if (!in_array("_id", $fields))
 			$this->fields["_id"] = 0;
 
 		return $this;
@@ -182,14 +210,18 @@ class QueryBuilder
 		return $this;
 	}
 
-	public function whereContains(string $key, $value): self
+	public function whereContains(string $key, $value, bool $caseSentitive = true): self
 	{
+		if (!$caseSentitive)
+			$value = "(?i)" . $caseSentitive;
 		$this->buildWhere("\$and", $key, "regx", ".*" . $value . ".*");
 		return $this;
 	}
 
-	public function whereStartsWith(string $key, $value): self
+	public function whereStartsWith(string $key, $value, bool $caseSentitive = true): self
 	{
+		if (!$caseSentitive)
+			$value = "(?i)" . $caseSentitive;
 		$this->buildWhere("\$and", $key, "regx", "^" . $value . ".*");
 		return $this;
 	}
@@ -200,14 +232,18 @@ class QueryBuilder
 		return $this;
 	}
 
-	public function orWhereContains(string $key, $value): self
+	public function orWhereContains(string $key, $value, bool $caseSentitive = true): self
 	{
+		if (!$caseSentitive)
+			$value = "(?i)" . $caseSentitive;
 		$this->buildWhere("\$or", $key, "regx", ".*" . $value . ".*");
 		return $this;
 	}
 
-	public function orWhereStartsWith(string $key, $value): self
+	public function orWhereStartsWith(string $key, $value, bool $caseSentitive = true): self
 	{
+		if (!$caseSentitive)
+			$value = "(?i)" . $caseSentitive;
 		$this->buildWhere("\$or", $key, "regx", "^" . $value . ".*");
 		return $this;
 	}
@@ -221,7 +257,7 @@ class QueryBuilder
 	private function buildWhere(string $prefix, $key, $operator = null, $value = null): void
 	{
 		// Assume that the operator is =
-		if ($value === null) {
+		if ($value === null && !in_array($operator, array_keys(self::$mongoOperatorMap))) {
 			$value    = $operator;
 			$operator = "=";
 		}
@@ -233,20 +269,34 @@ class QueryBuilder
 		$operator = self::$mongoOperatorMap[$operator];
 
 		// If we're passing a nested/sub/() where query
-		if (is_callable($key)) {
+		//if (is_callable($key)) {
+		if ($key instanceof \Closure) {
 			$innerQb = new self;
 			$key($innerQb);
 			$key = RawFilter::fromCollectionOfRawFilters($innerQb->getNormalizedFilters());
 		}
 
 		// Allow users to pass RawFilter or the parameters
-		if ($key instanceof RawFilter) {
+		if ($key instanceof RawFilter || $key instanceof ArrayContains) {
 			$this->filters[] = [
 				"prefix" => $prefix,
 				"filter" => $key->asArray()
 			];
 			return;
 		}
+
+		// Convert PHP Date Object to MongoFormat
+		if ($value instanceof \DateTime)
+			$value = new UTCDateTime($value->format("Uv"));
+
+		// If user are passing an ArrayContains
+		//		if ($key instanceof ArrayContains) {
+		//			$this->filters[] = [
+		//				"prefix" => $prefix,
+		//				"filter" => $key->asArray()
+		//			];
+		//			return;
+		//		}
 
 		// User called ->where with SQL parameters
 		$this->filters[] = [
@@ -328,8 +378,17 @@ class QueryBuilder
 
 	public function order(string $field, $sort = "DESC"): self
 	{
-		$this->order = [$field => is_numeric($sort) ? (int)$sort : ($sort === "DESC" ? 1 : -1)];
+		$this->order = [$field => is_numeric($sort) ? (int)$sort : ($sort === "DESC" ? -1 : 1)];
 		return $this;
+	}
+
+	public function count(): int
+	{
+		$this->count = ["\$count" => "count"];
+		$result      = $this->findAll()->toArray();
+		if (empty($result))
+			return 0;
+		return $result[0]["count"];
 	}
 
 	/*
@@ -365,7 +424,7 @@ class QueryBuilder
 		$this->result->setTypeMap(compact("array", "document", "root"));
 		$results = $this->result->toArray();
 
-		if ($this->considerMongoIds && $this->deserializeMongoIds && array_key_exists("_id", $this->fields) && $this->fields["_id"] === 1) {
+		if ($this->deserializeMongoIds && array_key_exists("_id", $this->fields) && $this->fields["_id"] === 1) {
 			$results = \array_map(function ($result) {
 				if (is_object($result))
 					$result->_id = (string)$result->_id;
@@ -381,9 +440,9 @@ class QueryBuilder
 		return empty($results) ? null : $results[0];
 	}
 
-	public function toArray(): ?array
+	public function toArray(bool $fullArray = false): ?array
 	{
-		return $this->deserializeResult();
+		return $this->deserializeResult("array", ($fullArray ? "array" : null), "array");
 	}
 
 	public function toObject($className = \stdClass::class)

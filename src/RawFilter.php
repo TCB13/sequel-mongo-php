@@ -4,7 +4,6 @@ namespace SequelMongo;
 
 class RawFilter
 {
-
 	public $operator = "\$and";
 	public $conditions = [];
 
