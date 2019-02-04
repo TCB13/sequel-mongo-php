@@ -206,7 +206,7 @@ var_dump($result);
 $qb = new QueryBuilder($mongo);
 $qb->collection("Orders")
    ->select("id", new ArrayLength("prioritaryItems", "prioritaryItems_lenght"))
-   ->where(new ArrayContains("prioritaryItems", "123"))
+   ->where(new ArrayLength("prioritaryItems", "123"))
    ->findAll();
 $result = $qb->toArray();
 var_dump($result);
