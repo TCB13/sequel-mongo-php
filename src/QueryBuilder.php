@@ -214,7 +214,7 @@ class QueryBuilder
 	public function whereContains(string $key, $value, bool $caseSentitive = true): self
 	{
 		if (!$caseSentitive)
-			$value = "(?i)" . $caseSentitive;
+			$value = "(?i)" . $value;
 		$this->buildWhere("\$and", $key, "regx", ".*" . $value . ".*");
 		return $this;
 	}
@@ -222,7 +222,7 @@ class QueryBuilder
 	public function whereStartsWith(string $key, $value, bool $caseSentitive = true): self
 	{
 		if (!$caseSentitive)
-			$value = "(?i)" . $caseSentitive;
+			$value = "(?i)" . $value;
 		$this->buildWhere("\$and", $key, "regx", "^" . $value . ".*");
 		return $this;
 	}
@@ -236,7 +236,7 @@ class QueryBuilder
 	public function orWhereContains(string $key, $value, bool $caseSentitive = true): self
 	{
 		if (!$caseSentitive)
-			$value = "(?i)" . $caseSentitive;
+			$value = "(?i)" . $value;
 		$this->buildWhere("\$or", $key, "regx", ".*" . $value . ".*");
 		return $this;
 	}
@@ -244,7 +244,7 @@ class QueryBuilder
 	public function orWhereStartsWith(string $key, $value, bool $caseSentitive = true): self
 	{
 		if (!$caseSentitive)
-			$value = "(?i)" . $caseSentitive;
+			$value = "(?i)" . $value;
 		$this->buildWhere("\$or", $key, "regx", "^" . $value . ".*");
 		return $this;
 	}
