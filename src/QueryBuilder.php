@@ -3,22 +3,22 @@
 namespace SequelMongo;
 
 use MongoDB\BSON\UTCDateTime;
-use \MongoDB\Collection;
-use \MongoDB\Database;
-use \MongoDB\DeleteResult;
-use \MongoDB\InsertManyResult;
-use \MongoDB\UpdateResult;
+use MongoDB\Collection;
+use MongoDB\Database;
+use MongoDB\DeleteResult;
+use MongoDB\InsertManyResult;
+use MongoDB\UpdateResult;
 
 class QueryBuilder
 {
 
-	/** @var \MongoDB\Database */
+	/** @var MongoDB\Database */
 	private static $globalConnection;
-	/** @var \MongoDB\Database */
+	/** @var MongoDB\Database */
 	private $connection;
-	/** @var \MongoDB\Collection */
+	/** @var MongoDB\Collection */
 	private $collection;
-	/** @var \MongoDB\Driver\Cursor */
+	/** @var MongoDB\Driver\Cursor */
 	private $result;
 
 	private $fields = [];
@@ -36,6 +36,7 @@ class QueryBuilder
 	protected static $mongoOperatorMap = [
 		"="     => "\$eq",
 		"!="    => "\$ne",
+		"<>"    => "\$ne",
 		">"     => "\$gt",
 		">="    => "\$gte",
 		"<"     => "\$lt",
@@ -288,15 +289,6 @@ class QueryBuilder
 		// Convert PHP Date Object to MongoFormat
 		if ($value instanceof \DateTime)
 			$value = new UTCDateTime($value->format("Uv"));
-
-		// If user are passing an ArrayContains
-		//		if ($key instanceof ArrayContains) {
-		//			$this->filters[] = [
-		//				"prefix" => $prefix,
-		//				"filter" => $key->asArray()
-		//			];
-		//			return;
-		//		}
 
 		// User called ->where with SQL parameters
 		$this->filters[] = [

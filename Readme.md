@@ -99,6 +99,20 @@ $qb = new QueryBuilder($mongo);
 ->whereRegex("item", ".*-middle-.*")
 ```
 
+**Count Documents**
+
+You may count the number of documents/records that match a query with the `count()` method:
+
+```php
+$qb = new QueryBuilder($mongo);
+$result = $qb->collection("Users")
+   ->where("userid", $this->id)
+   ->count();
+var_dump($result);
+```
+
+Note that you may not call `find()` or `findAll()` in combination with this method.
+
 **Insert a document**:
 ```php
 $qb = new QueryBuilder($mongo);
@@ -159,6 +173,40 @@ $qb->collection("Orders")
     //->join(["products" => "products#joined"], "sku", "=", "item"])
     //->join("products", "sku", "=", "item")
    ->join("Products", "sku", "item")
+   ->findAll();
+$result = $qb->toArray();
+var_dump($result);
+```
+
+**Special Functions**:
+
+*Max()* - get the maximum value in a set of values:
+```php
+$qb = new QueryBuilder($mongo);
+$qb->collection("Orders")
+   ->select("id", new Max("datecreated", "lastorder"))
+   ->where("userid", "u123")
+   ->find();
+$result = $qb->toArray();
+var_dump($result);
+```                           
+*ArrayContains()* - check if an array in a document contains a value (or at least one value if an array is passed):
+```php
+$qb = new QueryBuilder($mongo);
+$qb->collection("Orders")
+   ->select("id")
+   ->where(new ArrayContains("prioritaryItems", "123"))
+   ->findAll();
+$result = $qb->toArray();
+var_dump($result);
+```
+
+*ArrayLength()* - get the length of an array:
+```php
+$qb = new QueryBuilder($mongo);
+$qb->collection("Orders")
+   ->select("id", new ArrayLength("prioritaryItems", "prioritaryItems_lenght"))
+   ->where(new ArrayContains("prioritaryItems", "123"))
    ->findAll();
 $result = $qb->toArray();
 var_dump($result);
