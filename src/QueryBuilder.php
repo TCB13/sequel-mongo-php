@@ -211,17 +211,17 @@ class QueryBuilder
 		return $this;
 	}
 
-	public function whereContains(string $key, $value, bool $caseSentitive = true): self
+	public function whereContains(string $key, $value, bool $caseSensitive = true): self
 	{
-		if (!$caseSentitive)
+		if (!$caseSensitive)
 			$value = "(?i)" . $value;
 		$this->buildWhere("\$and", $key, "regx", ".*" . $value . ".*");
 		return $this;
 	}
 
-	public function whereStartsWith(string $key, $value, bool $caseSentitive = true): self
+	public function whereStartsWith(string $key, $value, bool $caseSensitive = true): self
 	{
-		if (!$caseSentitive)
+		if (!$caseSensitive)
 			$value = "(?i)" . $value;
 		$this->buildWhere("\$and", $key, "regx", "^" . $value . ".*");
 		return $this;
@@ -233,17 +233,17 @@ class QueryBuilder
 		return $this;
 	}
 
-	public function orWhereContains(string $key, $value, bool $caseSentitive = true): self
+	public function orWhereContains(string $key, $value, bool $caseSensitive = true): self
 	{
-		if (!$caseSentitive)
+		if (!$caseSensitive)
 			$value = "(?i)" . $value;
 		$this->buildWhere("\$or", $key, "regx", ".*" . $value . ".*");
 		return $this;
 	}
 
-	public function orWhereStartsWith(string $key, $value, bool $caseSentitive = true): self
+	public function orWhereStartsWith(string $key, $value, bool $caseSensitive = true): self
 	{
-		if (!$caseSentitive)
+		if (!$caseSensitive)
 			$value = "(?i)" . $value;
 		$this->buildWhere("\$or", $key, "regx", "^" . $value . ".*");
 		return $this;
