@@ -180,7 +180,7 @@ var_dump($result);
 
 **Special Functions**:
 
-*Max()* - get the maximum value in a set of values:
+*Max(string $property, ?string $alias = null)* - get the maximum value in a set of values:
 ```php
 $qb = new QueryBuilder($mongo);
 $qb->collection("Orders")
@@ -189,8 +189,18 @@ $qb->collection("Orders")
    ->find();
 $result = $qb->toArray();
 var_dump($result);
-```                           
-*ArrayContains()* - check if an array in a document contains a value (or at least one value if an array is passed):
+```
+*Min(string $property, ?string $alias = null)* - get the minimum value in a set of values:
+```php
+$qb = new QueryBuilder($mongo);
+$qb->collection("Orders")
+   ->select("id", new Min("datecreated", "lastorder"))
+   ->where("userid", "u123")
+   ->find();
+$result = $qb->toArray();
+var_dump($result);
+```                
+*ArrayContains(string $arrayProperty, $needles)* - check if an array in a document contains a value (or at least one value if an array is passed):
 ```php
 $qb = new QueryBuilder($mongo);
 $qb->collection("Orders")
@@ -201,7 +211,7 @@ $result = $qb->toArray();
 var_dump($result);
 ```
 
-*ArrayLength()* - get the length of an array:
+*ArrayLength(string $arrayProperty, ?string $alias = null)* - get the length of an array:
 ```php
 $qb = new QueryBuilder($mongo);
 $qb->collection("Orders")
@@ -210,6 +220,16 @@ $qb->collection("Orders")
    ->findAll();
 $result = $qb->toArray();
 var_dump($result);
+```
+
+*Increment(string $propertyName, int $incrementBy = 1)* - increment or decrement a document property by a value:
+```php
+$qb = new QueryBuilder($mongo);
+$qb->collection("Orders")
+   ->where("id", 12345)
+   ->update([
+    	new Increment("status")
+    ]);
 ```
 
 **For more examples check out the `examples` directory.**

@@ -152,7 +152,7 @@ class QueryBuilder
 
 		$this->fields = array_filter($fields, function ($field) {
 			// Max / Min
-			if ($field instanceof Max) {
+			if ($field instanceof Max || $field instanceof Min) {
 				$this->group = $field->asArray();
 				return false;
 			}

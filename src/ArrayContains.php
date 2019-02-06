@@ -7,9 +7,9 @@ class ArrayContains
 	public $name;
 	public $needle;
 
-	public function __construct(string $arrayField, $needles)
+	public function __construct(string $arrayProperty, $needles)
 	{
-		$this->name   = $arrayField;
+		$this->name   = $arrayProperty;
 		$this->needle = is_array($needles) ? $needles : [$needles];
 	}
 

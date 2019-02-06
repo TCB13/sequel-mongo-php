@@ -2,7 +2,7 @@
 
 namespace SequelMongo;
 
-class Max
+class Min
 {
 	public $name;
 	public $alias;
@@ -10,7 +10,7 @@ class Max
 	public function __construct(string $property, ?string $alias = null)
 	{
 		$this->name  = $property;
-		$this->alias = $alias === null ? $property . "_max" : $alias;
+		$this->alias = $alias === null ? $property . "_min" : $alias;
 	}
 
 	public function asArray(): array
@@ -18,7 +18,7 @@ class Max
 		return [
 			"\$group" => [
 				"_id"        => null,
-				$this->alias => ["\$max" => "\$" . $this->name]
+				$this->alias => ["\$min" => "\$" . $this->name]
 			]
 		];
 	}

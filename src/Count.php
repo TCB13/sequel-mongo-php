@@ -7,10 +7,10 @@ class Count
 	public $name;
 	public $alias;
 
-	public function __construct(string $field, ?string $alias = null)
+	public function __construct(string $property, ?string $alias = null)
 	{
-		$this->name  = $field;
-		$this->alias = $alias === null ? $field . "_size" : $alias;
+		$this->name  = $property;
+		$this->alias = $alias === null ? $property . "_size" : $alias;
 	}
 
 	public function asArray(): array
