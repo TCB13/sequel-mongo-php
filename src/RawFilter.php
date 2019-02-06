@@ -29,7 +29,7 @@ class RawFilter
 
 	public function push($filter): self
 	{
-		return $this->pushMany([$filter]);
+		return $this->pushMany($filter);
 	}
 
 	public function pushMany($filters): self

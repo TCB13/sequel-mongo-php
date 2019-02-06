@@ -258,7 +258,7 @@ class QueryBuilder
 	private function buildWhere(string $prefix, $key, $operator = null, $value = null): void
 	{
 		// Assume that the operator is =
-		if ($value === null && !in_array($operator, array_keys(self::$mongoOperatorMap))) {
+		if ($value === null && !in_array((string)$operator, array_keys(self::$mongoOperatorMap))) {
 			$value    = $operator;
 			$operator = "=";
 		}
@@ -398,7 +398,28 @@ class QueryBuilder
 	{
 		if (empty($this->filters))
 			throw new Exception("You must set a filter (where query) to update records.");
-		return $this->collection->updateMany($this->getNormalizedFilters(), ["\$set" => $update]);
+
+		$pipeline = [];
+
+		$inc = [];
+		$set = \array_filter($update, function($value) use (&$inc) {
+			// Filter out Increments
+			if ($value instanceof Increment) {
+				$inc[] = $value->asArray();
+				return false;
+			}
+			return true;
+		});
+
+		// Add set to the pipeline
+		if (!empty($set))
+			$pipeline["\$set"] = $set;
+
+		// Add all increments to the pipline
+		if (!empty($inc))
+			$pipeline["\$inc"] = array_merge(...array_column($inc, "\$inc"));
+
+		return $this->collection->updateMany($this->getNormalizedFilters(), $pipeline);
 	}
 
 	public function delete(): DeleteResult
