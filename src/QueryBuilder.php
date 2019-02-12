@@ -129,6 +129,8 @@ class QueryBuilder
 			$pipeline[] = $this->group;
 
 		// @todo: check if the pipeline has enough information to run a query!
+		if (!isset($this->collection))
+			throw new Exception("You must set a collection!");
 
 		$this->result = $this->collection->aggregate($pipeline);
 		return $this;
@@ -213,6 +215,7 @@ class QueryBuilder
 
 	public function whereContains(string $key, $value, bool $caseSensitive = true): self
 	{
+		$value = preg_quote($value);
 		if (!$caseSensitive)
 			$value = "(?i)" . $value;
 		$this->buildWhere("\$and", $key, "regx", ".*" . $value . ".*");
@@ -221,6 +224,7 @@ class QueryBuilder
 
 	public function whereStartsWith(string $key, $value, bool $caseSensitive = true): self
 	{
+		$value = preg_quote($value);
 		if (!$caseSensitive)
 			$value = "(?i)" . $value;
 		$this->buildWhere("\$and", $key, "regx", "^" . $value . ".*");
@@ -229,12 +233,13 @@ class QueryBuilder
 
 	public function whereEndsWith(string $key, $value): self
 	{
-		$this->buildWhere("\$and", $key, "regx", ".*" . $value . "$");
+		$this->buildWhere("\$and", $key, "regx", ".*" . preg_quote($value) . "$");
 		return $this;
 	}
 
 	public function orWhereContains(string $key, $value, bool $caseSensitive = true): self
 	{
+		$value = preg_quote($value);
 		if (!$caseSensitive)
 			$value = "(?i)" . $value;
 		$this->buildWhere("\$or", $key, "regx", ".*" . $value . ".*");
@@ -243,6 +248,7 @@ class QueryBuilder
 
 	public function orWhereStartsWith(string $key, $value, bool $caseSensitive = true): self
 	{
+		$value = preg_quote($value);
 		if (!$caseSensitive)
 			$value = "(?i)" . $value;
 		$this->buildWhere("\$or", $key, "regx", "^" . $value . ".*");
@@ -251,7 +257,7 @@ class QueryBuilder
 
 	public function orWhereEndsWith(string $key, $value): self
 	{
-		$this->buildWhere("\$or", $key, "regx", ".*" . $value . "$");
+		$this->buildWhere("\$or", $key, "regx", ".*" . preg_quote($value) . "$");
 		return $this;
 	}
 
