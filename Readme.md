@@ -200,6 +200,16 @@ $qb->collection("Orders")
 $result = $qb->toArray();
 var_dump($result);
 ```                
+*Increment(string $propertyName, int $incrementBy = 1)* - increment or decrement a document property by a value:
+```php
+$qb = new QueryBuilder($mongo);
+$qb->collection("Orders")
+   ->where("id", 12345)
+   ->update([
+    	new Increment("status")
+    ]);
+```
+
 *ArrayContains(string $arrayProperty, $needles)* - check if an array in a document contains a value (or at least one value if an array is passed):
 ```php
 $qb = new QueryBuilder($mongo);
@@ -210,7 +220,6 @@ $qb->collection("Orders")
 $result = $qb->toArray();
 var_dump($result);
 ```
-
 *ArrayLength(string $arrayProperty, ?string $alias = null)* - get the length of an array:
 ```php
 $qb = new QueryBuilder($mongo);
@@ -221,15 +230,27 @@ $qb->collection("Orders")
 $result = $qb->toArray();
 var_dump($result);
 ```
-
-*Increment(string $propertyName, int $incrementBy = 1)* - increment or decrement a document property by a value:
+*ArrayPush(string $arrayProperty, mixed $value)* - add an element to an array. Example: document with a `tokens` property that is an array:
 ```php
 $qb = new QueryBuilder($mongo);
-$qb->collection("Orders")
-   ->where("id", 12345)
+$qb->collection("Users")
+   ->where("id", 123)
    ->update([
-    	new Increment("status")
+        new ArrayPush("tokens", "...")
     ]);
+$result = $qb->toArray();
+var_dump($result);
+```
+*ArrayPull(string $arrayProperty, mixed $value)* - remove an element from an array. Example: document with a `tokens` property that is an array:
+```php
+$qb = new QueryBuilder($mongo);
+$qb->collection("Users")
+   ->where("id", 123)
+   ->update([
+        new ArrayPull("tokens", "...")
+    ]);
+$result = $qb->toArray();
+var_dump($result);
 ```
 
 **For more examples check out the `examples` directory.**
