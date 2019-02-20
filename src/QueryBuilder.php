@@ -408,12 +408,24 @@ class QueryBuilder
 		$pipeline = [];
 
 		$inc = [];
-		$set = \array_filter($update, function($value) use (&$inc) {
+        $pushes = [];
+		$pulls = [];
+		$set = \array_filter($update, function($value) use (&$inc, &$pushes, &$pulls) {
 			// Filter out Increments
 			if ($value instanceof Increment) {
 				$inc[] = $value->asArray();
 				return false;
 			}
+			// Filter out ArrayPush
+            if ($value instanceof ArrayPush) {
+                $pushes[] = $value->asArray();
+                return false;
+            }
+            // Filter out ArrayPull
+            if ($value instanceof ArrayPull) {
+                $pulls[] = $value->asArray();
+                return false;
+            }
 			return true;
 		});
 
@@ -425,6 +437,15 @@ class QueryBuilder
 		if (!empty($inc))
 			$pipeline["\$inc"] = array_merge(...array_column($inc, "\$inc"));
 
+        // Add all ArrayPushes to the pipline
+        if (!empty($pushes))
+            $pipeline["\$push"] = array_merge(...array_column($pushes, "\$push"));
+
+        // Add all ArrayPulls to the pipline
+        if (!empty($pulls))
+            $pipeline["\$pull"] = array_merge(...array_column($pulls, "\$pull"));
+
+        // Run the update query
 		return $this->collection->updateMany($this->getNormalizedFilters(), $pipeline);
 	}
 
