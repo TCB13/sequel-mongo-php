@@ -2,6 +2,7 @@
   "name": "tcb13/sequel-mongo-php",
   "type": "library",
   "description": "",
+  "license": "MIT",
   "require": {
 	"php": "^7.2",
 	"ext-json": "*",
