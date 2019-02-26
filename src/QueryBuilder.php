@@ -315,49 +315,49 @@ class QueryBuilder
 		return $this->filters;
 	}
 
-	public function join($collection, $localField, $operatorOrForeignField, $foreignField = null): self
-	{
-		// Allow users to skip the JOIN operator
-		if ($foreignField === null) {
-			$foreignField = $operatorOrForeignField;
-			$operator     = "=";
-		}
-		else {
-			$operator = $operatorOrForeignField;
-		}
+    public function join($collection, $localField, $operatorOrForeignField, $foreignField = null): self
+    {
+        // Allow users to skip the JOIN operator
+        if ($foreignField === null) {
+            $foreignField = $operatorOrForeignField;
+            $operator     = "=";
+        }
+        else {
+            $operator = $operatorOrForeignField;
+        }
 
-		// Automatically add an alias to the collection if not set
-		if (!\is_array($collection))
-			$collection = [$collection => $collection . "#joined"];
+        // Automatically add an alias to the collection if not set
+        if (!\is_array($collection))
+            $collection = [$collection => $collection . "#joined"];
 
-		// Automatically add an alias to the foreign field if not set
-		if (!\is_array($foreignField))
-			$foreignField = [$foreignField => $foreignField . "SEQUELMONGOForeignFieldAlias"];
+        // Automatically add an alias to the foreign field if not set
+        if (!\is_array($foreignField))
+            $foreignField = [$foreignField => $foreignField . "SEQUELMONGOFieldAlias"];
 
-		$filter = [
-			"\$and" => [
-				self::$mongoOperatorMap[$operator] => [
-					"\$" . $localField,
-					"\$\$" . reset($foreignField)
-				]
-			]
-		];
+        $filter = [
+            "\$and" => [
+                self::$mongoOperatorMap[$operator] => [
+                    "\$" . key($foreignField),
+                    "\$\$" . reset($foreignField)
+                ]
+            ]
+        ];
 
-		$this->lookup = [
-			"\$lookup" => [
-				"from"     => key($collection),
-				"let"      => [reset($foreignField) => "\$" . key($foreignField)],
-				"pipeline" => [["\$match" => ["\$expr" => $filter]]],
-				"as"       => reset($collection)
-			],
-		];
+        $this->lookup = [
+            "\$lookup" => [
+                "from"     => key($collection),
+                "let"      => [reset($foreignField) => "\$" . $localField],
+                "pipeline" => [["\$match" => ["\$expr" => $filter]]],
+                "as"       => reset($collection)
+            ],
+        ];
 
-		$this->unwind = [
-			"\$unwind" => ["path" => "\$" . reset($collection)]
-		];
+        $this->unwind = [
+            "\$unwind" => ["path" => "\$" . reset($collection)]
+        ];
 
-		return $this;
-	}
+        return $this;
+    }
 
 	/*
 	 * Sorting Methods
