@@ -2,7 +2,7 @@
 
 namespace SequelMongo;
 
-class Count
+class Count implements SpecialFunction
 {
 	public $name;
 	public $alias;

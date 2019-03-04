@@ -2,7 +2,7 @@
 
 namespace SequelMongo;
 
-class ArrayPush
+class ArrayPush implements SpecialFunction
 {
     protected $name;
     protected $value;

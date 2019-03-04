@@ -2,7 +2,7 @@
 
 namespace SequelMongo;
 
-class ArrayLength
+class ArrayLength implements SpecialFunction
 {
 	public $name;
 	public $alias;

@@ -2,7 +2,7 @@
 
 namespace SequelMongo;
 
-class Max
+class Max implements SpecialFunction
 {
 	public $name;
 	public $alias;

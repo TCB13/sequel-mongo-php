@@ -2,7 +2,7 @@
 
 namespace SequelMongo;
 
-class ArrayContains
+class ArrayContains implements SpecialFunction
 {
 	public $name;
 	public $needle;

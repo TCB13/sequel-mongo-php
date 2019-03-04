@@ -2,7 +2,7 @@
 
 namespace SequelMongo;
 
-class ArrayPull
+class ArrayPull implements SpecialFunction
 {
     protected $name;
     protected $value;

@@ -12,308 +12,308 @@ use MongoDB\UpdateResult;
 class QueryBuilder
 {
 
-	/** @var MongoDB\Database */
-	private static $globalConnection;
-	/** @var MongoDB\Database */
-	private $connection;
-	/** @var MongoDB\Collection */
-	private $collection;
-	/** @var MongoDB\Driver\Cursor */
-	private $result;
+    /** @var MongoDB\Database */
+    private static $globalConnection;
+    /** @var MongoDB\Database */
+    private $connection;
+    /** @var MongoDB\Collection */
+    private $collection;
+    /** @var MongoDB\Driver\Cursor */
+    private $result;
 
-	private $fields = [];
-	private $limit = 0;
-	private $skip = 0;
-	private $count = [];
-	private $order = ["_id" => 1];
-	private $filters = [];
-	private $lookup = [];
-	private $unwind = [];
-	private $group = [];
+    private $fields = [];
+    private $limit = 0;
+    private $skip = 0;
+    private $count = [];
+    private $order = ["_id" => 1];
+    private $filters = [];
+    private $lookup = [];
+    private $unwind = [];
+    private $group = [];
 
-	private $expectedMultipleResults = true;
+    private $expectedMultipleResults = true;
 
-	protected static $mongoOperatorMap = [
-		"="     => "\$eq",
-		"!="    => "\$ne",
-		"<>"    => "\$ne",
-		">"     => "\$gt",
-		">="    => "\$gte",
-		"<"     => "\$lt",
-		"<="    => "\$lte",
-		"in"    => "\$in",
-		"notIn" => "\$nin",
-		"regx"  => "\$regex"
-	];
+    protected static $mongoOperatorMap = [
+        "="     => "\$eq",
+        "!="    => "\$ne",
+        "<>"    => "\$ne",
+        ">"     => "\$gt",
+        ">="    => "\$gte",
+        "<"     => "\$lt",
+        "<="    => "\$lte",
+        "in"    => "\$in",
+        "notIn" => "\$nin",
+        "regx"  => "\$regex"
+    ];
 
-	/*
-	 * QB Configuration
-	 */
-	public $deserializeMongoIds = true;
+    /*
+     * QB Configuration
+     */
+    public $deserializeMongoIds = true;
 
-	public function __construct(?Database $connection = null)
-	{
-		if (isset(self::$globalConnection))
-			$this->connection = self::$globalConnection;
-		if ($connection !== null)
-			$this->connection = $connection;
-	}
+    public function __construct(?Database $connection = null)
+    {
+        if (isset(self::$globalConnection))
+            $this->connection = self::$globalConnection;
+        if ($connection !== null)
+            $this->connection = $connection;
+    }
 
-	public static function setGlobalConnection(Database $connection)
-	{
-		self::$globalConnection = $connection;
-	}
+    public static function setGlobalConnection(Database $connection)
+    {
+        self::$globalConnection = $connection;
+    }
 
-	/**
-	 * @param $collection
-	 *
-	 * @return $this
-	 * @throws Exception
-	 */
-	public function collection($collection)
-	{
+    /**
+     * @param $collection
+     *
+     * @return $this
+     * @throws Exception
+     */
+    public function collection($collection)
+    {
 
-		if ($collection instanceof Collection) {
-			$this->collection = $collection;
-			return $this;
-		}
+        if ($collection instanceof Collection) {
+            $this->collection = $collection;
+            return $this;
+        }
 
-		if (!isset($this->connection))
-			throw new Exception("Collections can only be set with strings if you provide a MongoDB connection at the constructor.");
+        if (!isset($this->connection))
+            throw new Exception("Collections can only be set with strings if you provide a MongoDB connection at the constructor.");
 
-		// if is_array() => collection alias on queries?
+        // if is_array() => collection alias on queries?
 
-		$this->collection = $this->connection->selectCollection($collection);
-		return $this;
-	}
+        $this->collection = $this->connection->selectCollection($collection);
+        return $this;
+    }
 
-	public function find(): self
-	{
-		$this->expectedMultipleResults = false;
-		$this->limit(1);
-		$this->findAll();
-		return $this;
-	}
+    public function find(): self
+    {
+        $this->expectedMultipleResults = false;
+        $this->limit(1);
+        $this->findAll();
+        return $this;
+    }
 
-	public function findAll(): self
-	{
-		// Build the pipeline
-		$pipeline = [];
+    public function findAll(): self
+    {
+        // Build the pipeline
+        $pipeline = [];
 
-		if (!empty($this->lookup)) // Lookups should ALWAYS be the first ones
-			$pipeline[] = $this->lookup;
+        if (!empty($this->lookup)) // Lookups should ALWAYS be the first ones
+            $pipeline[] = $this->lookup;
 
-		if (!empty($this->unwind))
-			$pipeline[] = $this->unwind;
+        if (!empty($this->unwind))
+            $pipeline[] = $this->unwind;
 
-		if (empty(!$this->filters)) {
-			$pipeline[] = [
-				"\$match" => $this->getNormalizedFilters()
-			];
-		}
+        if (empty(!$this->filters)) {
+            $pipeline[] = [
+                "\$match" => $this->getNormalizedFilters()
+            ];
+        }
 
-		$pipeline[] = ["\$sort" => $this->order];
+        $pipeline[] = ["\$sort" => $this->order];
 
-		if ($this->skip > 0)
-			$pipeline[] = ["\$skip" => $this->skip];
-		if ($this->limit > 0)
-			$pipeline[] = ["\$limit" => $this->limit];
+        if ($this->skip > 0)
+            $pipeline[] = ["\$skip" => $this->skip];
+        if ($this->limit > 0)
+            $pipeline[] = ["\$limit" => $this->limit];
 
-		if (!empty($this->count))
-			$pipeline[] = $this->count;
+        if (!empty($this->count))
+            $pipeline[] = $this->count;
 
-		if (!empty($this->fields))
-			$pipeline[] = ["\$project" => $this->fields];
+        if (!empty($this->fields))
+            $pipeline[] = ["\$project" => $this->fields];
 
-		if (!empty($this->group))
-			$pipeline[] = $this->group;
+        if (!empty($this->group))
+            $pipeline[] = $this->group;
 
-		// @todo: check if the pipeline has enough information to run a query!
-		if (!isset($this->collection))
-			throw new Exception("You must set a collection!");
+        // @todo: check if the pipeline has enough information to run a query!
+        if (!isset($this->collection))
+            throw new Exception("You must set a collection!");
 
-		$this->result = $this->collection->aggregate($pipeline);
-		return $this;
-	}
+        $this->result = $this->collection->aggregate($pipeline);
+        return $this;
+    }
 
-	public function select($fields): self
-	{
-		$fields = is_array($fields) && count(func_get_args()) === 1 && is_int(key($fields)) ? $fields : func_get_args();
-		$fields = array_map(function ($field) {
-			// Simple field
-			if (is_string($field))
-				return [$field => 1];
-			// Create an alias for a field
-			if (is_array($field))
-				return [reset($field) => "\$" . key($field)];
-			// ArrayLength Function or COUNT feature
-			if ($field instanceof ArrayLength /*|| $field instanceof Count*/)
-				return $field->asArray();
-			return $field;
-		}, $fields);
+    public function select($fields): self
+    {
+        $fields = is_array($fields) && count(func_get_args()) === 1 && is_int(key($fields)) ? $fields : func_get_args();
+        $fields = array_map(function ($field) {
+            // Simple field
+            if (is_string($field))
+                return [$field => 1];
+            // Create an alias for a field
+            if (is_array($field))
+                return [reset($field) => "\$" . key($field)];
+            // ArrayLength Function or COUNT feature
+            if ($field instanceof ArrayLength /*|| $field instanceof Count*/)
+                return $field->asArray();
+            return $field;
+        }, $fields);
 
-		$this->fields = array_filter($fields, function ($field) {
-			// Max / Min
-			if ($field instanceof Max || $field instanceof Min) {
-				$this->group = $field->asArray();
-				return false;
-			}
-			return true;
-		});
+        $this->fields = array_filter($fields, function ($field) {
+            // Max / Min
+            if ($field instanceof Max || $field instanceof Min) {
+                $this->group = $field->asArray();
+                return false;
+            }
+            return true;
+        });
 
-		if (count($this->fields))
-			$this->fields = call_user_func_array("array_merge", $this->fields);
+        if (count($this->fields))
+            $this->fields = call_user_func_array("array_merge", $this->fields);
 
-		// Exclude built in _id if not set in fields - MongoDB always returns this by default
-		if (!in_array("_id", $fields))
-			$this->fields["_id"] = 0;
+        // Exclude built in _id if not set in fields - MongoDB always returns this by default
+        if (!in_array("_id", $fields))
+            $this->fields["_id"] = 0;
 
-		return $this;
-	}
+        return $this;
+    }
 
-	public function where($key, $operatorOrValue = null, $value = null): self
-	{
-		$this->buildWhere("\$and", $key, $operatorOrValue, $value);
-		return $this;
-	}
+    public function where($key, $operatorOrValue = null, $value = null): self
+    {
+        $this->buildWhere("\$and", $key, $operatorOrValue, $value);
+        return $this;
+    }
 
-	public function orWhere($key, $operatorOrValue = null, $value = null): self
-	{
-		$this->buildWhere("\$or", $key, $operatorOrValue, $value);
-		return $this;
-	}
+    public function orWhere($key, $operatorOrValue = null, $value = null): self
+    {
+        $this->buildWhere("\$or", $key, $operatorOrValue, $value);
+        return $this;
+    }
 
-	public function whereIn(string $key, array $values): self
-	{
-		$this->buildWhere("\$and", $key, "in", $values);
-		return $this;
-	}
+    public function whereIn(string $key, array $values): self
+    {
+        $this->buildWhere("\$and", $key, "in", $values);
+        return $this;
+    }
 
-	public function whereNotIn(string $key, array $values): self
-	{
-		$this->buildWhere("\$and", $key, "notIn", $values);
-		return $this;
-	}
+    public function whereNotIn(string $key, array $values): self
+    {
+        $this->buildWhere("\$and", $key, "notIn", $values);
+        return $this;
+    }
 
-	public function orWhereIn(string $key, array $values): self
-	{
-		$this->buildWhere("\$or", $key, "in", $values);
-		return $this;
-	}
+    public function orWhereIn(string $key, array $values): self
+    {
+        $this->buildWhere("\$or", $key, "in", $values);
+        return $this;
+    }
 
-	public function orWhereNotIn(string $key, array $values): self
-	{
-		$this->buildWhere("\$or", $key, "notIn", $values);
-		return $this;
-	}
+    public function orWhereNotIn(string $key, array $values): self
+    {
+        $this->buildWhere("\$or", $key, "notIn", $values);
+        return $this;
+    }
 
-	public function whereRegex(string $key, string $expression): self
-	{
-		$this->buildWhere("\$and", $key, "regx", $expression);
-		return $this;
-	}
+    public function whereRegex(string $key, string $expression): self
+    {
+        $this->buildWhere("\$and", $key, "regx", $expression);
+        return $this;
+    }
 
-	public function whereContains(string $key, $value, bool $caseSensitive = true): self
-	{
-		$value = preg_quote($value);
-		if (!$caseSensitive)
-			$value = "(?i)" . $value;
-		$this->buildWhere("\$and", $key, "regx", ".*" . $value . ".*");
-		return $this;
-	}
+    public function whereContains(string $key, $value, bool $caseSensitive = true): self
+    {
+        $value = preg_quote($value);
+        if (!$caseSensitive)
+            $value = "(?i)" . $value;
+        $this->buildWhere("\$and", $key, "regx", ".*" . $value . ".*");
+        return $this;
+    }
 
-	public function whereStartsWith(string $key, $value, bool $caseSensitive = true): self
-	{
-		$value = preg_quote($value);
-		if (!$caseSensitive)
-			$value = "(?i)" . $value;
-		$this->buildWhere("\$and", $key, "regx", "^" . $value . ".*");
-		return $this;
-	}
+    public function whereStartsWith(string $key, $value, bool $caseSensitive = true): self
+    {
+        $value = preg_quote($value);
+        if (!$caseSensitive)
+            $value = "(?i)" . $value;
+        $this->buildWhere("\$and", $key, "regx", "^" . $value . ".*");
+        return $this;
+    }
 
-	public function whereEndsWith(string $key, $value): self
-	{
-		$this->buildWhere("\$and", $key, "regx", ".*" . preg_quote($value) . "$");
-		return $this;
-	}
+    public function whereEndsWith(string $key, $value): self
+    {
+        $this->buildWhere("\$and", $key, "regx", ".*" . preg_quote($value) . "$");
+        return $this;
+    }
 
-	public function orWhereContains(string $key, $value, bool $caseSensitive = true): self
-	{
-		$value = preg_quote($value);
-		if (!$caseSensitive)
-			$value = "(?i)" . $value;
-		$this->buildWhere("\$or", $key, "regx", ".*" . $value . ".*");
-		return $this;
-	}
+    public function orWhereContains(string $key, $value, bool $caseSensitive = true): self
+    {
+        $value = preg_quote($value);
+        if (!$caseSensitive)
+            $value = "(?i)" . $value;
+        $this->buildWhere("\$or", $key, "regx", ".*" . $value . ".*");
+        return $this;
+    }
 
-	public function orWhereStartsWith(string $key, $value, bool $caseSensitive = true): self
-	{
-		$value = preg_quote($value);
-		if (!$caseSensitive)
-			$value = "(?i)" . $value;
-		$this->buildWhere("\$or", $key, "regx", "^" . $value . ".*");
-		return $this;
-	}
+    public function orWhereStartsWith(string $key, $value, bool $caseSensitive = true): self
+    {
+        $value = preg_quote($value);
+        if (!$caseSensitive)
+            $value = "(?i)" . $value;
+        $this->buildWhere("\$or", $key, "regx", "^" . $value . ".*");
+        return $this;
+    }
 
-	public function orWhereEndsWith(string $key, $value): self
-	{
-		$this->buildWhere("\$or", $key, "regx", ".*" . preg_quote($value) . "$");
-		return $this;
-	}
+    public function orWhereEndsWith(string $key, $value): self
+    {
+        $this->buildWhere("\$or", $key, "regx", ".*" . preg_quote($value) . "$");
+        return $this;
+    }
 
-	private function buildWhere(string $prefix, $key, $operator = null, $value = null): void
-	{
-		// Assume that the operator is =
-		if ($value === null && !in_array((string)$operator, array_keys(self::$mongoOperatorMap))) {
-			$value    = $operator;
-			$operator = "=";
-		}
+    private function buildWhere(string $prefix, $key, $operator = null, $value = null): void
+    {
+        // Assume that the operator is =
+        if ($value === null && !in_array((string)$operator, array_keys(self::$mongoOperatorMap))) {
+            $value    = $operator;
+            $operator = "=";
+        }
 
-		// Convert SQL operators to Mongo
-		if (!array_key_exists($operator, self::$mongoOperatorMap))
-			throw new Exception("Invalid Operator.");
+        // Convert SQL operators to Mongo
+        if (!array_key_exists($operator, self::$mongoOperatorMap))
+            throw new Exception("Invalid Operator.");
 
-		$operator = self::$mongoOperatorMap[$operator];
+        $operator = self::$mongoOperatorMap[$operator];
 
-		// If we're passing a nested/sub/() where query
-		//if (is_callable($key)) {
-		if ($key instanceof \Closure) {
-			$innerQb = new self;
-			$key($innerQb);
-			$key = RawFilter::fromCollectionOfRawFilters($innerQb->getNormalizedFilters());
-		}
+        // If we're passing a nested/sub/() where query
+        //if (is_callable($key)) {
+        if ($key instanceof \Closure) {
+            $innerQb = new self;
+            $key($innerQb);
+            $key = RawFilter::fromCollectionOfRawFilters($innerQb->getNormalizedFilters());
+        }
 
-		// Allow users to pass RawFilter or the parameters
-		if ($key instanceof RawFilter || $key instanceof ArrayContains) {
-			$this->filters[] = [
-				"prefix" => $prefix,
-				"filter" => $key->asArray()
-			];
-			return;
-		}
+        // Allow users to pass RawFilter or the parameters
+        if ($key instanceof RawFilter || $key instanceof ArrayContains) {
+            $this->filters[] = [
+                "prefix" => $prefix,
+                "filter" => $key->asArray()
+            ];
+            return;
+        }
 
-		// Convert PHP Date Object to MongoFormat
-		if ($value instanceof \DateTime)
-			$value = new UTCDateTime($value->format("Uv"));
+        // Convert PHP Date Object to MongoFormat
+        if ($value instanceof \DateTime)
+            $value = new UTCDateTime($value->format("Uv"));
 
-		// User called ->where with SQL parameters
-		$this->filters[] = [
-			"prefix" => $prefix,
-			"filter" => [
-				"\$and" => [[$key => [$operator => $value]]]
-			]
-		];
+        // User called ->where with SQL parameters
+        $this->filters[] = [
+            "prefix" => $prefix,
+            "filter" => [
+                "\$and" => [[$key => [$operator => $value]]]
+            ]
+        ];
 
-	}
+    }
 
-	public function getNormalizedFilters(): array
-	{
-		$prefixes      = array_column($this->filters, "prefix");
-		$this->filters = [
-			count(array_unique($prefixes)) === 1 ? reset($this->filters)["prefix"] : "\$or" => array_column($this->filters, "filter")
-		];
-		return $this->filters;
-	}
+    public function getNormalizedFilters(): array
+    {
+        $prefixes      = array_column($this->filters, "prefix");
+        $this->filters = [
+            count(array_unique($prefixes)) === 1 ? reset($this->filters)["prefix"] : "\$or" => array_column($this->filters, "filter")
+        ];
+        return $this->filters;
+    }
 
     public function join($collection, $localField, $operatorOrForeignField, $foreignField = null): self
     {
@@ -359,64 +359,65 @@ class QueryBuilder
         return $this;
     }
 
-	/*
-	 * Sorting Methods
-	 */
-	public function limit(int $limit): self
-	{
-		$this->limit = $limit;
-		return $this;
-	}
+    /*
+     * Sorting Methods
+     */
+    public function limit(int $limit): self
+    {
+        $this->limit = $limit;
+        return $this;
+    }
 
-	public function offset(int $offset): self
-	{
-		$this->skip = $offset;
-		return $this;
-	}
+    public function offset(int $offset): self
+    {
+        $this->skip = $offset;
+        return $this;
+    }
 
-	public function order(string $field, $sort = "DESC"): self
-	{
-		$this->order = [$field => is_numeric($sort) ? (int)$sort : ($sort === "DESC" ? -1 : 1)];
-		return $this;
-	}
+    public function order(string $field, $sort = "DESC"): self
+    {
+        $this->order = [$field => is_numeric($sort) ? (int)$sort : ($sort === "DESC" ? -1 : 1)];
+        return $this;
+    }
 
-	public function count(): int
-	{
-		$this->count = ["\$count" => "count"];
-		$result      = $this->findAll()->toArray();
-		if (empty($result))
-			return 0;
-		return $result[0]["count"];
-	}
+    public function count(): int
+    {
+        $this->count = ["\$count" => "count"];
+        $result      = $this->findAll()
+            ->toArray();
+        if (empty($result))
+            return 0;
+        return $result[0]["count"];
+    }
 
-	/*
-	 * Record Manipulation
-	 */
-	public function insert($documents): InsertManyResult
-	{
-		$fel = reset($documents);
-		if (!is_object($fel) && !\is_array($fel))
-			$documents = [$documents];
-		return $this->collection->insertMany(array_values($documents));
-	}
+    /*
+     * Record Manipulation
+     */
+    public function insert($documents): InsertManyResult
+    {
+        $fel = reset($documents);
+        if (!is_object($fel) && !\is_array($fel))
+            $documents = [$documents];
+        return $this->collection->insertMany(array_values($documents));
+    }
 
-	public function update($update): UpdateResult
-	{
-		if (empty($this->filters))
-			throw new Exception("You must set a filter (where query) to update records.");
+    public function update($update): UpdateResult
+    {
+        if (empty($this->filters))
+            throw new Exception("You must set a filter (where query) to update records.");
 
-		$pipeline = [];
+        $pipeline = [];
 
-		$inc = [];
+        $inc    = [];
         $pushes = [];
-		$pulls = [];
-		$set = \array_filter($update, function($value) use (&$inc, &$pushes, &$pulls) {
-			// Filter out Increments
-			if ($value instanceof Increment) {
-				$inc[] = $value->asArray();
-				return false;
-			}
-			// Filter out ArrayPush
+        $pulls  = [];
+        $set    = \array_filter($update, function ($value) use (&$inc, &$pushes, &$pulls) {
+            // Filter out Increments
+            if ($value instanceof Increment) {
+                $inc[] = $value->asArray();
+                return false;
+            }
+            // Filter out ArrayPush
             if ($value instanceof ArrayPush) {
                 $pushes[] = $value->asArray();
                 return false;
@@ -426,16 +427,16 @@ class QueryBuilder
                 $pulls[] = $value->asArray();
                 return false;
             }
-			return true;
-		});
+            return true;
+        });
 
-		// Add set to the pipeline
-		if (!empty($set))
-			$pipeline["\$set"] = $set;
+        // Add set to the pipeline
+        if (!empty($set))
+            $pipeline["\$set"] = $set;
 
-		// Add all increments to the pipline
-		if (!empty($inc))
-			$pipeline["\$inc"] = array_merge(...array_column($inc, "\$inc"));
+        // Add all increments to the pipline
+        if (!empty($inc))
+            $pipeline["\$inc"] = array_merge(...array_column($inc, "\$inc"));
 
         // Add all ArrayPushes to the pipline
         if (!empty($pushes))
@@ -446,54 +447,120 @@ class QueryBuilder
             $pipeline["\$pull"] = array_merge(...array_column($pulls, "\$pull"));
 
         // Run the update query
-		return $this->collection->updateMany($this->getNormalizedFilters(), $pipeline);
-	}
+        return $this->collection->updateMany($this->getNormalizedFilters(), $pipeline);
+    }
 
-	public function delete(): DeleteResult
-	{
-		if (empty($this->filters))
-			throw new Exception("You must set a filter (where query) to delete records.");
-		return $this->collection->deleteMany($this->getNormalizedFilters());
-	}
+    public function delete(): DeleteResult
+    {
+        if (empty($this->filters))
+            throw new Exception("You must set a filter (where query) to delete records.");
+        return $this->collection->deleteMany($this->getNormalizedFilters());
+    }
 
-	/*
-	 * Result Output Methods
-	 */
-	protected function deserializeResult($array = "array", $document = "array", $root = "array")
-	{
-		$this->result->setTypeMap(compact("array", "document", "root"));
-		$results = $this->result->toArray();
+    /*
+     * Result Output Methods
+     */
+    protected function deserializeResult($array = "array", $document = "array", $root = "array")
+    {
+        $this->result->setTypeMap(compact("array", "document", "root"));
+        $results = $this->result->toArray();
 
-		if ($this->deserializeMongoIds && array_key_exists("_id", $this->fields) && $this->fields["_id"] === 1) {
-			$results = \array_map(function ($result) {
-				if (is_object($result))
-					$result->_id = (string)$result->_id;
-				else
-					$result["_id"] = (string)$result["_id"];
-				return $result;
-			}, $results);
-		}
+        if ($this->deserializeMongoIds && array_key_exists("_id", $this->fields) && $this->fields["_id"] === 1) {
+            $results = \array_map(function ($result) {
+                if (is_object($result))
+                    $result->_id = (string)$result->_id;
+                else
+                    $result["_id"] = (string)$result["_id"];
+                return $result;
+            }, $results);
+        }
 
-		if ($this->expectedMultipleResults)
-			return $results;
+        if ($this->expectedMultipleResults)
+            return $results;
 
-		return empty($results) ? null : $results[0];
-	}
+        return empty($results) ? null : $results[0];
+    }
 
-	public function toArray(bool $fullArray = false): ?array
-	{
-		return $this->deserializeResult("array", ($fullArray ? "array" : null), "array");
-	}
+    public function toArray(bool $fullArray = false): ?array
+    {
+        return $this->deserializeResult("array", ($fullArray ? "array" : null), "array");
+    }
 
-	public function toObject($className = \stdClass::class)
-	{
-		return $this->deserializeResult($className, $className, $className);
-	}
+    public function toObject($className = \stdClass::class)
+    {
+        return $this->deserializeResult($className, $className, $className);
+    }
 
-	public function toJson(): string
-	{
-		$result = $this->toArray();
-		return json_encode($result);
-	}
+    public function toJson(): string
+    {
+        return json_encode($this->toArray());
+    }
+
+    /**
+     * Takes a variable number of QueryBuilder instances and merges them into one.
+     *
+     * @param \SequelMongo\QueryBuilder ...$queryBuilderInstances
+     *
+     * @return \SequelMongo\QueryBuilder
+     */
+    public static function merge(QueryBuilder ...$queryBuilderInstances): self
+    {
+
+        $merge = [
+            "fields",
+            "filters",
+            "lookup",
+            "unwind"
+        ];
+
+        $state = array_shift($queryBuilderInstances)->getState();
+        foreach ($queryBuilderInstances as $qb) {
+            $newState = $qb->getState();
+            foreach ($newState as $key => $value) {
+                if (!isset($state[$key])) {
+                    $state[$key] = $value;
+                }
+                else {
+                    // Properties that should be merged : Properties that should be assigned / replace existing values
+                    $state[$key] = in_array($key, $merge) ? array_merge($state[$key], $newState[$key]) : $newState[$key];
+                }
+            }
+        }
+
+        return self::__set_state($state);
+    }
+
+    public function getState(): array
+    {
+        $reflectionClass = new \ReflectionClass(self::class);
+        $defaults        = $reflectionClass->getDefaultProperties();
+
+        $excludedProperties = [
+            "globalConnection",
+            "mongoOperatorMap",
+            "expectedMultipleResults",
+            "deserializeMongoIds"
+        ];
+
+        $state    = [];
+        $defaults = array_diff_key($defaults, array_flip($excludedProperties));
+        foreach ($defaults as $key => $value) {
+            if ($this->$key !== $value) {
+                $state[$key] = $this->$key;
+            }
+        }
+
+        return $state;
+    }
+
+    public static function __set_state($array)
+    {
+        $qb = new self;
+        foreach ($array as $key => $value) {
+            $qb->$key = $value;
+        }
+
+        return $qb;
+    }
 
 }

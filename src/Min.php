@@ -2,7 +2,7 @@
 
 namespace SequelMongo;
 
-class Min
+class Min implements SpecialFunction
 {
 	public $name;
 	public $alias;

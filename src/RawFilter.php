@@ -2,7 +2,7 @@
 
 namespace SequelMongo;
 
-class RawFilter
+class RawFilter implements SpecialFunction
 {
 	public $operator = "\$and";
 	public $conditions = [];

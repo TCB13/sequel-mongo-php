@@ -2,7 +2,7 @@
 
 namespace SequelMongo;
 
-class Increment
+class Increment implements SpecialFunction
 {
 	protected $name;
 	protected $by;
