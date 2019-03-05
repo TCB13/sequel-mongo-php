@@ -30,6 +30,7 @@ class QueryBuilder
     private $lookup = [];
     private $unwind = [];
     private $group = [];
+    private $indexBy = null;
 
     private $expectedMultipleResults = true;
 
@@ -161,12 +162,14 @@ class QueryBuilder
             return true;
         });
 
-        if (count($this->fields))
+        if (count($this->fields)) {
             $this->fields = call_user_func_array("array_merge", $this->fields);
+        }
 
         // Exclude built in _id if not set in fields - MongoDB always returns this by default
-        if (!in_array("_id", $fields))
+        if (!in_array("_id", $fields)) {
             $this->fields["_id"] = 0;
+        }
 
         return $this;
     }
@@ -467,16 +470,22 @@ class QueryBuilder
 
         if ($this->deserializeMongoIds && array_key_exists("_id", $this->fields) && $this->fields["_id"] === 1) {
             $results = \array_map(function ($result) {
-                if (is_object($result))
+                if (is_object($result)) {
                     $result->_id = (string)$result->_id;
-                else
+                }
+                else {
                     $result["_id"] = (string)$result["_id"];
+                }
                 return $result;
             }, $results);
         }
 
-        if ($this->expectedMultipleResults)
+        if ($this->expectedMultipleResults) {
+            if ($this->indexBy !== null) {
+                $results = array_combine(array_column($results, $this->indexBy), $results);
+            }
             return $results;
+        }
 
         return empty($results) ? null : $results[0];
     }
@@ -496,6 +505,20 @@ class QueryBuilder
         return json_encode($this->toArray());
     }
 
+    public function indexBy(string $property)
+    {
+        if (!$this->expectedMultipleResults) {
+            throw new Exception("You can only use indexBy with findAll.");
+        }
+
+        if (!empty($this->fields) && !array_key_exists($property, $this->fields)) {
+            throw new Exception("Property '{$property}' not selected.");
+        }
+
+        $this->indexBy = $property;
+        return $this;
+    }
+
     /**
      * Takes a variable number of QueryBuilder instances and merges them into one.
      *
@@ -505,7 +528,6 @@ class QueryBuilder
      */
     public static function merge(QueryBuilder ...$queryBuilderInstances): self
     {
-
         $merge = [
             "fields",
             "filters",
