@@ -15,6 +15,13 @@ class ArrayPull implements SpecialFunction
 
     public function asArray(): array
     {
+        foreach ($this->value as $key => &$value) {
+            if (is_array($value)) {
+                $value = [
+                    "\$in" => $value
+                ];
+            }
+        }
         return [
             "\$pull" => [
                 $this->name => $this->value
