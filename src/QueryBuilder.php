@@ -385,6 +385,24 @@ class QueryBuilder
         return $this;
     }
 
+    public function unwind(string $path, ?string $includeArrayIndex = null, bool $preserveNullAndEmptyArrays = false): self
+    {
+        $unwind = [
+            "path"                       => "\$" . $path,
+            "preserveNullAndEmptyArrays" => $preserveNullAndEmptyArrays,
+        ];
+
+        if ($includeArrayIndex !== null) {
+            $unwind["includeArrayIndex"] = $includeArrayIndex;
+        }
+
+        $this->unwind = [
+            "\$unwind" => $unwind
+        ];
+
+        return $this;
+    }
+
     /*
      * Sorting Methods
      */
