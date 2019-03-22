@@ -23,6 +23,7 @@ class QueryBuilder
     private $result;
 
     private $fields = [];
+    private $addFields = [];
     private $limit = 0;
     private $skip = 0;
     private $count = [];
@@ -114,6 +115,10 @@ class QueryBuilder
             $pipeline[] = $this->unwind;
         }
 
+        if (!empty($this->addFields)) {
+            $pipeline[] = ["\$addFields" => $this->addFields];
+        }
+
         if (empty(!$this->filters)) {
             $pipeline[] = [
                 "\$match" => $this->getNormalizedFilters()
@@ -164,7 +169,9 @@ class QueryBuilder
             }
             // ArrayLength Function or COUNT feature
             if ($field instanceof ArrayLength /*|| $field instanceof Count*/) {
-                return $field->asArray();
+                $arrayLen = $field->asArray();
+                $this->addFields[] = $arrayLen;
+                return [key($arrayLen) => 1];
             }
             return $field;
         }, $fields);
@@ -180,6 +187,10 @@ class QueryBuilder
 
         if (count($this->fields)) {
             $this->fields = call_user_func_array("array_merge", $this->fields);
+        }
+
+        if (count($this->addFields)) {
+            $this->addFields = call_user_func_array("array_merge", $this->addFields);
         }
 
         // Exclude built in _id if not set in fields - MongoDB always returns this by default
