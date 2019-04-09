@@ -34,6 +34,8 @@ class QueryBuilder
     private $group = [];
     private $indexBy = null;
 
+    private $customPipeline = [];
+
     private $expectedMultipleResults = true;
 
     protected static $mongoOperatorMap = [
@@ -104,7 +106,11 @@ class QueryBuilder
     public function findAll(): self
     {
         // Build the pipeline
-        $pipeline = [];
+        if (is_object($this->customPipeline) && !empty($this->customPipeline->pipeline) && $this->customPipeline->beforeQb) {
+            $pipeline = $this->customPipeline->pipeline;
+        } else {
+            $pipeline = [];
+        }
 
         if (!empty($this->lookup)) // Lookups should ALWAYS be the first ones
         {
@@ -125,7 +131,9 @@ class QueryBuilder
             ];
         }
 
-        $pipeline[] = ["\$sort" => $this->order];
+        if (!is_object($this->customPipeline) || empty($this->customPipeline->pipeline)) {
+            $pipeline[] = ["\$sort" => $this->order];
+        }
 
         if ($this->skip > 0) {
             $pipeline[] = ["\$skip" => $this->skip];
@@ -144,6 +152,10 @@ class QueryBuilder
 
         if (!empty($this->group)) {
             $pipeline[] = $this->group;
+        }
+
+        if (is_object($this->customPipeline) && !empty($this->customPipeline->pipeline) && !$this->customPipeline->beforeQb) {
+            $pipeline = array_merge($pipeline, $this->customPipeline->pipeline);
         }
 
         // @todo: check if the pipeline has enough information to run a query!
@@ -169,7 +181,7 @@ class QueryBuilder
             }
             // ArrayLength Function or COUNT feature
             if ($field instanceof ArrayLength /*|| $field instanceof Count*/) {
-                $arrayLen = $field->asArray();
+                $arrayLen          = $field->asArray();
                 $this->addFields[] = $arrayLen;
                 return [key($arrayLen) => 1];
             }
@@ -351,6 +363,15 @@ class QueryBuilder
         return $this->filters;
     }
 
+    public function pipeline(array $pipeline, bool $beforeQueryBuilderPipeline = false): self
+    {
+        $this->customPipeline = new \stdClass();
+        $this->customPipeline->beforeQb = $beforeQueryBuilderPipeline;
+        $this->customPipeline->pipeline = $pipeline;
+
+        return $this;
+    }
+
     public function join($collection, $localField, $operatorOrForeignField, $foreignField = null): self
     {
         // Allow users to skip the JOIN operator
@@ -438,8 +459,7 @@ class QueryBuilder
     public function count(): int
     {
         $this->count = ["\$count" => "count"];
-        $result      = $this->findAll()
-            ->toArray();
+        $result      = $this->findAll()->toArray();
         if (empty($result)) {
             return 0;
         }
