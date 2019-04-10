@@ -365,7 +365,7 @@ class QueryBuilder
 
     public function pipeline(array $pipeline, bool $beforeQueryBuilderPipeline = false): self
     {
-        $this->customPipeline = new \stdClass();
+        $this->customPipeline           = new \stdClass();
         $this->customPipeline->beforeQb = $beforeQueryBuilderPipeline;
         $this->customPipeline->pipeline = $pipeline;
 
@@ -460,9 +460,10 @@ class QueryBuilder
     {
         $this->count = ["\$count" => "count"];
         $result      = $this->findAll()->toArray();
-        if (empty($result)) {
+        if (empty($result) || (isset($result[0]) && empty($result[0]))) {
             return 0;
         }
+
         return $result[0]["count"];
     }
 
