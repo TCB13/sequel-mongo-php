@@ -5,19 +5,19 @@ namespace SequelMongo;
 class ArrayPush implements SpecialFunction
 {
     protected $name;
-    protected $value;
+    protected $values;
 
-    public function __construct(string $property, $value)
+    public function __construct(string $property, ...$values)
     {
         $this->name  = $property;
-        $this->value = $value;
+        $this->values = $values;
     }
 
     public function asArray(): array
     {
         return [
             "\$push" => [
-                $this->name => $this->value
+                $this->name => ["\$each" => $this->values]
             ]
         ];
     }
