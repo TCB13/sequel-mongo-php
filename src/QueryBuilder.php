@@ -206,7 +206,7 @@ class QueryBuilder
         }
 
         // Exclude built in _id if not set in fields - MongoDB always returns this by default
-        if (!in_array("_id", $fields)) {
+        if (!array_key_exists("_id", $this->fields)) {
             $this->fields["_id"] = 0;
         }
 
