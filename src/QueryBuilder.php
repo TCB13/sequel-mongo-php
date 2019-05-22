@@ -474,7 +474,7 @@ class QueryBuilder
     {
 
         if (is_array($documents) && empty($documents)) {
-            throw new Exception("Insert: Expecting at least on document to insert.");
+            throw new Exception("Insert: Expecting at least one document to insert.");
         }
 
         // Single Mongo Seriazable object
