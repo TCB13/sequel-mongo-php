@@ -602,6 +602,13 @@ class QueryBuilder
         return $this->deserializeResult($className, $className, $className);
     }
 
+    public function toUnidimensionalArray(string $key, bool $unique = false)
+    {
+        $arr = array_column($this->toArray(), $key);
+
+        return $unique ? array_unique($arr) : $arr;
+    }
+
     public function toJson(): string
     {
         return json_encode($this->toArray());
