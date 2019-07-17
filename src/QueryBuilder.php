@@ -509,7 +509,12 @@ class QueryBuilder
             throw new Exception("You must set a filter (where query) to update records.");
         }
 
-        $pipeline = [];
+        // Build the pipeline
+        if (is_object($this->customPipeline) && !empty($this->customPipeline->pipeline) && $this->customPipeline->beforeQb) {
+            $pipeline = $this->customPipeline->pipeline;
+        } else {
+            $pipeline = [];
+        }
 
         if (is_array($update)) {
             $inc    = [];
@@ -560,6 +565,10 @@ class QueryBuilder
             } else {
                 throw new Exception("Collection Update: You must provide an array of fields or an instance of a class that implements 'MongoDB\BSON\Serializable'");
             }
+        }
+
+        if (is_object($this->customPipeline) && !empty($this->customPipeline->pipeline) && !$this->customPipeline->beforeQb) {
+            $pipeline = array_merge($pipeline, $this->customPipeline->pipeline);
         }
 
         // Run the update query
