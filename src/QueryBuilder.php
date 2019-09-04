@@ -27,7 +27,7 @@ class QueryBuilder
     private $limit = 0;
     private $skip = 0;
     private $count = [];
-    private $order = ["_id" => 1];
+    private $order = [];
     private $filters = [];
     private $lookup = [];
     private $unwind = [];
@@ -131,7 +131,7 @@ class QueryBuilder
             ];
         }
 
-        if (!is_object($this->customPipeline) || empty($this->customPipeline->pipeline)) {
+        if (!empty($this->order) && (!is_object($this->customPipeline) || empty($this->customPipeline->pipeline))) {
             $pipeline[] = ["\$sort" => $this->order];
         }
 
