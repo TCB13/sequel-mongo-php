@@ -252,5 +252,20 @@ $qb->collection("Users")
 $result = $qb->toArray();
 var_dump($result);
 ```
+**Debug Queries**:
+It is possible possible to debug the query pipeline built by the Query Builder for each query.
+```php
+QueryBuilder::$pipelineDebug = true; // Enable pipeline debugging!
+
+// Run a query
+$result = (new QueryBuilder())->collection("xyz")
+            ->where("active", true)
+            ->findAll()
+            ->toArray();
+
+// Fetch the pipeline built by the Query Builder
+var_dump(QueryBuilder::getLastPipelineLog()); // Get the pipeline built for the last query
+var_dump(QueryBuilder::getPipelineLogs()); // Get all pipelines ever built by the query builder
+```
 
 **For more examples check out the `examples` directory.**
