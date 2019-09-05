@@ -253,6 +253,7 @@ $result = $qb->toArray();
 var_dump($result);
 ```
 **Debug Queries**:
+
 It is possible possible to debug the query pipeline built by the Query Builder for each query.
 ```php
 QueryBuilder::$pipelineDebug = true; // Enable pipeline debugging!
