@@ -36,6 +36,9 @@ class QueryBuilder
 
     private $customPipeline = [];
 
+    public static $pipelineDebug = false;
+    private static $pipelineLogs = [];
+
     private $expectedMultipleResults = true;
 
     protected static $mongoOperatorMap = [
@@ -131,7 +134,7 @@ class QueryBuilder
             ];
         }
 
-        if (!empty($this->order) && (!is_object($this->customPipeline) || empty($this->customPipeline->pipeline))) {
+        if (!empty($this->order)) {
             $pipeline[] = ["\$sort" => $this->order];
         }
 
@@ -163,8 +166,22 @@ class QueryBuilder
             throw new Exception("You must set a collection!");
         }
 
+        if (self::$pipelineDebug) {
+            self::$pipelineLogs[] = $pipeline;
+        }
+
         $this->result = $this->collection->aggregate($pipeline);
         return $this;
+    }
+
+    public static function getPipelineLogs(): array
+    {
+        return self::$pipelineLogs;
+    }
+
+    public static function getLastPipelineLog(): array
+    {
+        return end(self::$pipelineLogs);
     }
 
     public function select($fields): self
