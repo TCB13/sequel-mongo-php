@@ -8,7 +8,7 @@
 	"ext-json": "*",
 	"ext-curl": "*",
 	"ext-mongodb": "*",
-	"mongodb/mongodb": "1.4.*"
+	"mongodb/mongodb": "*"
   },
   "authors": [
 	{
