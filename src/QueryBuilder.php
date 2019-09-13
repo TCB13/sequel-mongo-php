@@ -74,6 +74,11 @@ class QueryBuilder
         self::$globalConnection = $connection;
     }
 
+    public static function getGlobalConnection(): ?Database
+    {
+        return self::$globalConnection ?? null;
+    }
+
     /**
      * @param $collection
      *
