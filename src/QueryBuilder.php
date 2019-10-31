@@ -120,13 +120,13 @@ class QueryBuilder
             $pipeline = [];
         }
 
-        if (!empty($this->lookup)) // Lookups should ALWAYS be the first ones
-        {
-            $pipeline[] = $this->lookup;
+        // Lookups should ALWAYS be the first ones
+        if (!empty($this->lookup)) {
+            $pipeline = array_merge($pipeline, $this->lookup);
         }
 
         if (!empty($this->unwind)) {
-            $pipeline[] = $this->unwind;
+            $pipeline = array_merge($pipeline, $this->unwind);
         }
 
         if (!empty($this->addFields)) {
@@ -423,7 +423,7 @@ class QueryBuilder
             ]
         ];
 
-        $this->lookup = [
+        $this->lookup[] = [
             "\$lookup" => [
                 "from"     => key($collection),
                 "let"      => [reset($foreignField) => "\$" . $localField],
@@ -432,7 +432,7 @@ class QueryBuilder
             ],
         ];
 
-        $this->unwind = [
+        $this->unwind[] = [
             "\$unwind" => ["path" => "\$" . reset($collection)]
         ];
 
