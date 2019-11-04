@@ -450,7 +450,7 @@ class QueryBuilder
             $unwind["includeArrayIndex"] = $includeArrayIndex;
         }
 
-        $this->unwind = [
+        $this->unwind[] = [
             "\$unwind" => $unwind
         ];
 
