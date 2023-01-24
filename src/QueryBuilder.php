@@ -635,7 +635,7 @@ class QueryBuilder
 
     public function toUnidimensionalArray(string $key, bool $unique = false)
     {
-        $arr = array_column($this->toArray(), $key);
+        $arr = array_column($this->toArray() ?? [], $key);
 
         return $unique ? array_unique($arr) : $arr;
     }
