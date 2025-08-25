@@ -363,7 +363,7 @@ class QueryBuilder
 
         // Convert PHP Date Object to MongoFormat
         if ($value instanceof \DateTime) {
-            $value = new UTCDateTime($value->format("Uv"));
+            $value = new UTCDateTime((int)$value->format("Uv"));
         }
 
         // User called ->where with SQL parameters
